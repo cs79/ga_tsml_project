@@ -1,12 +1,16 @@
-## imports
+'''
+Imports:
+========
+
+'''
 
 from pandas import DataFrame, Series
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt #maybe
-import time
+import time #maybe
 
-"""
+'''
 Declare some global variables:
 ==============================
 
@@ -31,39 +35,88 @@ mins_ahead:     how many minutes ahead to set known targets for each observation
 
                 try: 1, 2, 3 to start
 
-"""
+'''
 
 slice_length = 5
 prior_slices = 3
 discount_wgt = 0.5
 mins_ahead = [1, 2, 3]
 
-## fetch data -- try getting various days' back to suss out the max obtainable
+'''
+Fetching and importing raw data:
+================================
 
-raw_data = DataFrame()
+Max trailing days of tick data is 20 from Google Finance -- started collecting
+full sets from January 8, 2015; can add forward from there and re-run generic
+data cleaning pipeline and analysis.
 
-#code to import .txt from google link as a DataFrame
-dl_datestamp = time.strftime("%c") # just to keep track, as linked data will change
+Data are being captured for SPX (could try some others but this seems to be a
+practical choice for a proof-of-concept like this... except for lack of volume data),
+and are stored in /rawdata as .txt files.
 
-"""
+Minute-tick data are being obtained from Google Finance for given tickers for a specified historical range using the following URL format to scrape for data:
+
+http://www.google.com/finance/getprices?i=[PERIOD]&p=[DAYS]d&f=d,o,h,l,c,v&df=cpct&q=[TICKER]
+
+* [PERIOD]: Interval/frequency in seconds (60 is the most granular that the data are available for)
+* [DAYS]: Integer number of days back in time to fetch data for
+* [TICKER]: A valid ticker symbol that you could search for on Google Finance
+
+Saved data filename scheme is:
+[Ticker]_[sequence number, starting at 001]_[Mon]_[Day]_[Year].txt
+where the date is the start date for that file.
+
+'''
+
+# column format is constant for data fetched from this Google Finance API
+cols = ['DATE', 'CLOSE', 'HIGH', 'LOW', 'OPEN', 'VOLUME']
+#only have one file for right now so not worrying about splicing things together yet
+raw_data = pd.read_table('rawdata/SPX_001_Jan_8_2015.txt', sep=',', header=6, names=cols)
+
+'''
 Cleaning the raw data:
 ======================
-
 Tasks:
-        - Figure out how to separate based on the "date" header
-        - Figure out what format the date headers are in (Unix Epoch ??)
+        - Separate based on the "date" header
+        - Create a datetime index for the data
+            - Convert from Unix epoch format where given
+            -
         - Figure out which of the columns we want to do stuff with
             - At least one price, volume (probably), some range calculation based on H/L
-        - Figure out if we can create a global index equivalent to datetime
-            - Assuming we have the proper date format, and converting the minutes to time
-            - If we have this, we can keep this as an ordered global index in new df
         - Define graphical parameters (based on summary statistics of variance of slice_length windows over the dataset for max values)
         - Convert the slice_length windows into sparse matrices of data based on graphical parameters
         - Create a new dataframe with the following features:
             - prior_slices summary stats, discounted by discount_wgt
             - sparse matrix data for current slice
             - targets (one for each mins_ahead that can fit into current days' data)
+'''
 
-"""
+# to convert Unix Epoch stamps:
+def convert_ts(stamp):
+    stamp = int(stamp) # making sure
+    return time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(stamp))
 
-# ok then
+'''
+TODO:   convert first marked epoch stamp (minus the leading 'a')
+        fill down til the NEXT 'a' stamp, incrementing minute
+        repeat for all 'a' stamps
+        Re-index our dataframe to have a pandas timeseries index based on DATE column
+'''
+
+# quick graph for 1/28 progress report, basic exploration:
+
+raw_data[['CLOSE', 'HIGH', 'LOW', 'OPEN']][10:30].plot()
+plt.savefig('example_plot.png')
+
+'''
+Various cruft from earlier ideas:
+=================================
+
+Keeping these around for now, just in case...
+
+dl_datestamp = time.strftime("%c")              # to datestamp downloads
+
+raw_data.to_pickle('data/df_pickle')            # to maintain a static copy of
+raw_data = pd.read_pickle('data/df_pickle')     # raw data as feeds change
+
+'''
