@@ -103,6 +103,25 @@ TODO:   convert first marked epoch stamp (minus the leading 'a')
         Re-index our dataframe to have a pandas timeseries index based on DATE column
 '''
 
+## need to import Minute() to get this to work:
+
+converted = []
+
+for i in range(len(raw_data['DATE'])):
+    if raw_data['DATE'][i][0] == 'a':
+        converted.append(convert_dt(i[1:len(i)]))
+    else:
+        converted.append(converted[(i-1) + Minute()])
+
+dti = pd.DateTimeIndex(converted)
+
+clean = DataFrame(raw_data[['OPEN', 'CLOSE', 'HIGH', 'LOW']], index=dti)
+
+## something like this, anyway
+
+
+
+
 # quick graph for 1/28 progress report, basic exploration:
 
 raw_data[['CLOSE', 'HIGH', 'LOW', 'OPEN']][10:30].plot()
