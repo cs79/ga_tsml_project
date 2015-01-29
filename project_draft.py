@@ -7,8 +7,9 @@ Imports:
 from pandas import DataFrame, Series
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt #maybe
-import time #maybe
+import matplotlib.pyplot as plt
+import time
+import datetime
 
 '''
 Declare some global variables:
@@ -70,17 +71,14 @@ where the date is the start date for that file.
 
 # column format is constant for data fetched from this Google Finance API
 cols = ['DATE', 'CLOSE', 'HIGH', 'LOW', 'OPEN', 'VOLUME']
-#only have one file for right now so not worrying about splicing things together yet
+# only have one file for right now so not worrying about splicing things together yet
+# assuming we are in the directory where this file is located, w/rawdata subdir
 raw_data = pd.read_table('rawdata/SPX_001_Jan_8_2015.txt', sep=',', header=6, names=cols)
 
 '''
 Cleaning the raw data:
 ======================
 Tasks:
-        - Separate based on the "date" header
-        - Create a datetime index for the data
-            - Convert from Unix epoch format where given
-            -
         - Figure out which of the columns we want to do stuff with
             - At least one price, volume (probably), some range calculation based on H/L
         - Define graphical parameters (based on summary statistics of variance of slice_length windows over the dataset for max values)
@@ -91,45 +89,42 @@ Tasks:
             - targets (one for each mins_ahead that can fit into current days' data)
 '''
 
-# to convert Unix Epoch stamps:
+# ugly, presumably redundant function to convert Unix Epoch stamps:
 def convert_ts(stamp):
     stamp = int(stamp) # making sure
-    return time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(stamp))
+    return pd.datetime.strptime(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(stamp)), '%Y-%m-%d %H:%M:%S')
 
-'''
-TODO:   convert first marked epoch stamp (minus the leading 'a')
-        fill down til the NEXT 'a' stamp, incrementing minute
-        repeat for all 'a' stamps
-        Re-index our dataframe to have a pandas timeseries index based on DATE column
-'''
-
-## need to import Minute() to get this to work:
+## could also use some refactoring but this works for now:
 
 converted = []
 
-for i in range(len(raw_data['DATE'])):
+for i in range(len(raw_data)):
     if raw_data['DATE'][i][0] == 'a':
-        converted.append(convert_dt(i[1:len(i)]))
+        converted.append(convert_ts(raw_data['DATE'][i][1:len(raw_data['DATE'][i])]))
     else:
-        converted.append(converted[(i-1) + Minute()])
+        converted.append(converted[(i-1)] + datetime.timedelta(minutes=1))
 
-dti = pd.DateTimeIndex(converted)
-
-clean = DataFrame(raw_data[['OPEN', 'CLOSE', 'HIGH', 'LOW']], index=dti)
-
-## something like this, anyway
-
-
-
-
-# quick graph for 1/28 progress report, basic exploration:
-
-raw_data[['CLOSE', 'HIGH', 'LOW', 'OPEN']][10:30].plot()
-plt.savefig('example_plot.png')
+dti = pd.DatetimeIndex(converted)
+clean_cols = ['CLOSE', 'HIGH', 'LOW', 'OPEN', 'VOLUME']
+clean = DataFrame(raw_data.as_matrix(columns=clean_cols), index=dti, columns=clean_cols)
 
 '''
-Various cruft from earlier ideas:
-=================================
+TODO:
+exploratory graphing; see what sizes / lines to be included make for something potentially interesting
+
+Learn how to plot a "pure" graph in matplotlib / seaborn
+    - no background colors
+    - no weird grid in background
+    - no decoration around frame
+    - just the lines, please
+'''
+
+# check the ipython notebook covered in an earlier class for some "undecorated" graphs
+# check seaborn tuts (maybe overkill for this if seaborn is meant to be ggplot2)
+
+'''
+Various cruft from earlier mucking about:
+=========================================
 
 Keeping these around for now, just in case...
 
@@ -137,5 +132,10 @@ dl_datestamp = time.strftime("%c")              # to datestamp downloads
 
 raw_data.to_pickle('data/df_pickle')            # to maintain a static copy of
 raw_data = pd.read_pickle('data/df_pickle')     # raw data as feeds change
+
+# code used to create quick graph for 1/28 progress report, basic exploration:
+
+raw_data[['CLOSE', 'HIGH', 'LOW', 'OPEN']][10:30].plot()
+plt.savefig('example_plot.png')
 
 '''
