@@ -34,7 +34,7 @@ discount_wgt:   a factor by which to downweight prior_slices data
 mins_ahead:     how many minutes ahead to set known targets for each observation
                 to train against (algos may do better at certain times ahead)
 
-                try: 1, 2, 3 to start
+                try: 1, 2, 3 to start; maybe 5, 10, 15, 30, 60 will yeild better results
 
 '''
 
@@ -74,6 +74,8 @@ cols = ['DATE', 'CLOSE', 'HIGH', 'LOW', 'OPEN', 'VOLUME']
 # only have one file for right now so not worrying about splicing things together yet
 # assuming we are in the directory where this file is located, w/rawdata subdir
 raw_data = pd.read_table('rawdata/SPX_001_Jan_8_2015.txt', sep=',', header=6, names=cols)
+
+# now have multiple files; need to read in both -- probably best to do separately, and join on datetimeindex
 
 '''
 Cleaning the raw data:
@@ -121,6 +123,42 @@ Learn how to plot a "pure" graph in matplotlib / seaborn
 
 # check the ipython notebook covered in an earlier class for some "undecorated" graphs
 # check seaborn tuts (maybe overkill for this if seaborn is meant to be ggplot2)
+
+
+'''
+Basic loop to graph slices of the time series:
+
+import cv2
+
+graph_data = DataFrame()    # maybe -- not sure that this actually works
+
+for i in range(len(raw_data)) - slice_length:
+    # plot the length of the time slice
+        # various matplotlib code goes here -- NB no need to actually plot the figure onscreen
+        # below is example code -- need better params to make it as clean a visual as possible
+        clean[['CLOSE', 'HIGH', 'LOW', 'OPEN']][i:i+slice_length].plot()
+
+    # save the graph image to disk
+        # anywhere; going to read from it then destroy it
+        plt.savefig('obs_graph.png')
+
+    # load in pixel data
+        # looks like cv2 package may work:
+        img_data = cv2.imread('obs_graph.png', CV_LOAD_IMAGE_GRAYSCALE)
+
+    # access pixel values and unroll
+        img.shape() # should give dimensions - rows and columns
+        unrolled = []
+        for row in img.shape()[0]:
+            unrolled.append(row)    # this can't be right, but something like this
+
+    # append the unrolled row of pixel observations to the graph_data DF
+        pd.concat([Series(unrolled), graph_data], axis=0)   # maybe
+
+'''
+
+# if the above loop actually works and isn't unusably slow, next step would be
+# to get a CORRECTLY MATCHING DatetimeIndex for the graph_data df, then concat to clean
 
 '''
 Various cruft from earlier mucking about:
